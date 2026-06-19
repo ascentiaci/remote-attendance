@@ -7,11 +7,386 @@
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
+		<title>Remote Attend</title>
+		<style>
+			*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+				background: #f5f5f7;
+				min-height: 100vh;
+				display: flex;
+				align-items: flex-start;
+				justify-content: center;
+				padding: 2rem 1rem;
+				color: #1d1d1f;
+			}
+
+			.card {
+				background: #fff;
+				border-radius: 18px;
+				padding: 1.75rem 1.5rem;
+				max-width: 420px;
+				width: 100%;
+				box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+			}
+
+			h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+			.subtitle { color: #6e6e73; font-size: 0.9rem; margin-bottom: 1.5rem; }
+
+			/* Course info */
+			.info-list {
+				list-style: none;
+				border: 1px solid #e5e5ea;
+				border-radius: 12px;
+				overflow: hidden;
+				margin-bottom: 1.75rem;
+			}
+			.info-list li {
+				display: flex;
+				gap: 0.75rem;
+				padding: 0.7rem 1rem;
+				font-size: 0.9rem;
+			}
+			.info-list li:not(:last-child) { border-bottom: 1px solid #e5e5ea; }
+			.info-list .label { color: #6e6e73; flex: 0 0 80px; }
+			.info-list .value { color: #1d1d1f; font-weight: 500; word-break: break-all; }
+
+			/* Steps */
+			.steps {
+				display: flex;
+				align-items: center;
+				gap: 0;
+				margin-bottom: 1.5rem;
+			}
+			.step {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 0.3rem;
+				font-size: 0.75rem;
+				color: #6e6e73;
+			}
+			.step .dot {
+				width: 30px;
+				height: 30px;
+				border-radius: 50%;
+				background: #e5e5ea;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-weight: 700;
+				font-size: 0.85rem;
+				color: #6e6e73;
+				transition: background 0.3s, color 0.3s;
+			}
+			.step-line {
+				flex: 0 0 40px;
+				height: 2px;
+				background: #e5e5ea;
+				margin-bottom: 1.2rem;
+				transition: background 0.3s;
+			}
+			.step.active .dot { background: #007aff; color: #fff; }
+			.step.active { color: #007aff; font-weight: 600; }
+			.step.done .dot { background: #34c759; color: #fff; }
+			.step.done { color: #34c759; }
+			.step-line.done { background: #34c759; }
+
+			/* Buttons */
+			.btn {
+				display: block;
+				width: 100%;
+				padding: 0.9rem;
+				border-radius: 12px;
+				border: none;
+				font-size: 1rem;
+				font-weight: 600;
+				cursor: pointer;
+				transition: opacity 0.15s, transform 0.1s;
+				margin-bottom: 0.75rem;
+			}
+			.btn:active:not(:disabled) { transform: scale(0.98); }
+			.btn:disabled { opacity: 0.38; cursor: not-allowed; }
+			.btn-primary { background: #007aff; color: #fff; }
+			.btn-success { background: #34c759; color: #fff; }
+
+			/* Status */
+			#status {
+				font-size: 0.875rem;
+				color: #6e6e73;
+				min-height: 1.4em;
+				margin-bottom: 0.5rem;
+			}
+			#map-link {
+				display: inline-block;
+				font-size: 0.8rem;
+				color: #007aff;
+				text-decoration: none;
+				margin-bottom: 1.25rem;
+			}
+			#map-link:empty { display: none; }
+
+			/* Inline result banner */
+			#result {
+				border-radius: 10px;
+				padding: 0.875rem 1rem;
+				font-size: 0.9rem;
+				line-height: 1.5;
+				display: none;
+			}
+			#result.success {
+				background: #f0fdf4;
+				border: 1px solid #86efac;
+				color: #166534;
+				display: block;
+			}
+			#result.error {
+				background: #fef2f2;
+				border: 1px solid #fca5a5;
+				color: #991b1b;
+				display: block;
+			}
+
+			/* Check in / out toggle */
+			.attendance-toggle {
+				display: flex;
+				background: #e5e5ea;
+				border-radius: 10px;
+				padding: 3px;
+				margin-bottom: 1.5rem;
+				gap: 3px;
+			}
+			.attendance-toggle input[type="radio"] { display: none; }
+			.attendance-toggle label {
+				flex: 1;
+				text-align: center;
+				padding: 0.55rem 0;
+				border-radius: 8px;
+				font-size: 0.9rem;
+				font-weight: 600;
+				color: #6e6e73;
+				cursor: pointer;
+				transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+				user-select: none;
+			}
+			#type-in:checked ~ label[for="type-in"],
+			#type-out:checked ~ label[for="type-out"] {
+				background: #fff;
+				color: #1d1d1f;
+				box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+			}
+			#type-out:checked ~ label[for="type-out"] { color: #ff3b30; }
+
+			/* Location permission help */
+			.location-help {
+				background: #fff8e1;
+				border: 1px solid #f0c040;
+				border-radius: 10px;
+				padding: 0.875rem 1rem;
+				font-size: 0.875rem;
+				line-height: 1.6;
+			}
+			.location-help p { margin: 0.35rem 0; }
+			.location-help ol { margin: 0.35rem 0; padding-left: 1.25rem; }
+			.location-help li { margin: 0.2rem 0; }
+		</style>
 	</head>
 	<body>
-		<h1>Astro</h1>
+		<div class="card">
+			<h1>Remote Attend</h1>
+			<p class="subtitle">Confirm your attendance for this session.</p>
+
+			<ul class="info-list">
+				<li><span class="label">Course</span><span class="value" id="courseName"></span></li>
+				<li><span class="label">Student</span><span class="value" id="user"></span></li>
+				<li><span class="label">Source</span><span class="value" id="sourcePage"></span></li>
+			</ul>
+
+			<div class="attendance-toggle">
+				<input type="radio" id="type-in" name="attendance-type" value="checkin" checked />
+				<input type="radio" id="type-out" name="attendance-type" value="checkout" />
+				<label for="type-in">Check In</label>
+				<label for="type-out">Check Out</label>
+			</div>
+
+			<div class="steps">
+				<div class="step active" id="step1"><div class="dot">1</div>Get Location</div>
+				<div class="step-line" id="step-line"></div>
+				<div class="step" id="step2"><div class="dot">2</div>Submit</div>
+			</div>
+
+			<button class="btn btn-primary" id="find-me">Share My Location</button>
+			<div id="status"></div>
+			<a id="map-link" href="" target="_blank"></a>
+
+			<button class="btn btn-success" id="validate" disabled>Submit Attendance</button>
+			<div id="result"></div>
+		</div>
+
+		<script>
+			// Populate course info from URL params
+			const urlParams = new URLSearchParams(window.location.search);
+			const courseName = urlParams.get("coursename") || "";
+			const user = urlParams.get("user") || "";
+			const sourcePage = urlParams.get("pagepath") || "";
+
+			const courseNameEl = document.getElementById("courseName");
+			const userEl = document.getElementById("user");
+			const sourcePageEl = document.getElementById("sourcePage");
+			if (courseNameEl) courseNameEl.textContent = courseName;
+			if (userEl) userEl.textContent = user;
+			if (sourcePageEl) sourcePageEl.textContent = sourcePage;
+		</script>
+
+		<script>
+			// Stored coords set after a successful location fetch
+			let pendingCoords: { latitude: number; longitude: number } | null = null;
+
+			const findMeBtn = document.querySelector<HTMLButtonElement>("#find-me");
+			const validateBtn = document.querySelector<HTMLButtonElement>("#validate");
+			const statusEl = document.querySelector<HTMLElement>("#status");
+			const mapLink = document.querySelector<HTMLAnchorElement>("#map-link");
+			const resultEl = document.querySelector<HTMLElement>("#result");
+			const step1 = document.querySelector<HTMLElement>("#step1");
+			const step2 = document.querySelector<HTMLElement>("#step2");
+			const stepLine = document.querySelector<HTMLElement>("#step-line");
+
+			function setStatus(text: string) {
+				if (statusEl) statusEl.textContent = text;
+			}
+
+			function setStatusHTML(html: string) {
+				if (statusEl) statusEl.innerHTML = html;
+			}
+
+			function setResult(message: string, type: "success" | "error") {
+				if (!resultEl) return;
+				resultEl.textContent = message;
+				resultEl.className = type;
+			}
+
+			function advanceToStep2() {
+				step1?.classList.replace("active", "done");
+				stepLine?.classList.add("done");
+				step2?.classList.add("active");
+			}
+
+			function onLocationSuccess(position: GeolocationPosition) {
+				pendingCoords = {
+					latitude: position.coords.latitude,
+					longitude: position.coords.longitude,
+				};
+
+				setStatus("");
+				if (mapLink) {
+					mapLink.href = `https://www.openstreetmap.org/#map=18/${pendingCoords.latitude}/${pendingCoords.longitude}`;
+					mapLink.textContent = `${pendingCoords.latitude.toFixed(5)}°, ${pendingCoords.longitude.toFixed(5)}° — view on map`;
+				}
+
+				if (findMeBtn) findMeBtn.textContent = "Location found ✓";
+				if (validateBtn) validateBtn.removeAttribute("disabled");
+				advanceToStep2();
+			}
+
+			function onLocationError(err: GeolocationPositionError) {
+				switch (err.code) {
+					case err.PERMISSION_DENIED:
+						setStatusHTML(`
+							<div class="location-help">
+								<strong>Location access denied.</strong>
+								<p>To enable location for this site:</p>
+								<ol>
+									<li>Open the <strong>Settings</strong> app</li>
+									<li>Tap <strong>Privacy &amp; Security</strong></li>
+									<li>Tap <strong>Location Services</strong></li>
+									<li>Tap <strong>Safari Websites</strong></li>
+									<li>Select <strong>While Using the App</strong></li>
+								</ol>
+								<p>Then return here and try again.</p>
+							</div>`);
+						break;
+					case err.POSITION_UNAVAILABLE:
+						setStatus("Location information is unavailable.");
+						break;
+					case err.TIMEOUT:
+						setStatus("Location request timed out. Please try again.");
+						break;
+					default:
+						setStatus("Unable to retrieve your location.");
+				}
+				if (findMeBtn) {
+					findMeBtn.textContent = "Try Again";
+					findMeBtn.removeAttribute("disabled");
+				}
+			}
+
+			findMeBtn?.addEventListener("click", () => {
+				if (!navigator.geolocation) {
+					setStatus("Geolocation is not supported by your browser.");
+					return;
+				}
+				setStatus("Locating…");
+				if (mapLink) mapLink.textContent = "";
+				if (findMeBtn) {
+					findMeBtn.textContent = "Locating…";
+					findMeBtn.setAttribute("disabled", "");
+				}
+				navigator.geolocation.getCurrentPosition(onLocationSuccess, onLocationError, {
+					enableHighAccuracy: true,
+					timeout: 10000,
+					maximumAge: 0,
+				});
+			});
+
+			validateBtn?.addEventListener("click", () => {
+				if (!pendingCoords) return;
+
+				const attendanceType =
+					(document.querySelector<HTMLInputElement>("input[name='attendance-type']:checked")?.value) || "checkin";
+
+				const urlParams = new URLSearchParams(window.location.search);
+				const url = new URL("https://n8n.888ltd.ca/webhook/45908f74-5c48-440d-9edf-9cddb3a478f7");
+				url.searchParams.set("coursename", urlParams.get("coursename") || "");
+				url.searchParams.set("user", urlParams.get("user") || "");
+				url.searchParams.set("pagepath", urlParams.get("pagepath") || "");
+				url.searchParams.set("latitude", pendingCoords.latitude.toString());
+				url.searchParams.set("longitude", pendingCoords.longitude.toString());
+				url.searchParams.set("type", attendanceType);
+
+				if (validateBtn) {
+					validateBtn.textContent = "Submitting…";
+					validateBtn.setAttribute("disabled", "");
+				}
+				if (resultEl) resultEl.className = "";
+
+				fetch(url.toString())
+					.then((response) => response.json())
+					.then((data) => {
+						if (data.valid) {
+							setResult(data.message, "success");
+							if (validateBtn) validateBtn.textContent = "Submitted ✓";
+						} else {
+							setResult(data.message || "Attendance validation failed. Please try again.", "error");
+							if (validateBtn) {
+								validateBtn.textContent = "Submit Attendance";
+								validateBtn.removeAttribute("disabled");
+							}
+						}
+					})
+					.catch(() => {
+						setResult("An error occurred while submitting. Please try again.", "error");
+						if (validateBtn) {
+							validateBtn.textContent = "Submit Attendance";
+							validateBtn.removeAttribute("disabled");
+						}
+					});
+			});
+		</script>
 	</body>
 </html>
